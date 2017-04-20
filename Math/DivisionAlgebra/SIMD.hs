@@ -75,6 +75,12 @@ class VectorSpace c => DivisionAlgebra c where
   realPart :: c -> RealPart c
   imagPart :: c -> ImagPart c
 
+instance DivisionAlgebra Double where
+  type RealPart Double = Double
+  type ImagPart Double = ()
+  x+:() = x
+  realPart = id
+  imagPart = const ()
 instance DivisionAlgebra (Complex Double) where
   type RealPart (Complex Double) = Double
   type ImagPart (Complex Double) = Double
