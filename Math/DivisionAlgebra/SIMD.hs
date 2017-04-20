@@ -43,10 +43,9 @@ instance Num (Complex Double) where
   {-# INLINE negate #-}
   negate (ComplexDouble a) = ComplexDouble $ negate a
   {-# INLINE abs #-}
-  abs (ComplexDouble a) = ComplexDouble $ SIMD.packVector (sqrt . SIMD.sumVector $ a*a, 0)
+  abs a = modulus a +: 0
   {-# INLINE signum #-}
-  signum (ComplexDouble a) = ComplexDouble
-                $ a / SIMD.broadcastVector (sqrt . SIMD.sumVector $ a*a)
+  signum n@(ComplexDouble a) = ComplexDouble $ a / SIMD.broadcastVector (modulus n)
 
 instance AdditiveGroup (Complex Double) where
   {-# INLINE zeroV #-}
@@ -74,6 +73,8 @@ class VectorSpace c => DivisionAlgebra c where
   (+:) :: RealPart c -> ImagPart c -> c
   realPart :: c -> RealPart c
   imagPart :: c -> ImagPart c
+  modulus :: c -> RealPart c
+  modulusSq :: c -> RealPart c
 
 instance DivisionAlgebra Double where
   type RealPart Double = Double
@@ -81,6 +82,8 @@ instance DivisionAlgebra Double where
   x+:() = x
   realPart = id
   imagPart = const ()
+  modulus = abs
+  modulusSq = (^2)
 instance DivisionAlgebra (Complex Double) where
   type RealPart (Complex Double) = Double
   type ImagPart (Complex Double) = Double
@@ -89,3 +92,5 @@ instance DivisionAlgebra (Complex Double) where
    where (r, _) = SIMD.unpackVector a
   imagPart (ComplexDouble a) = i
    where (_, i) = SIMD.unpackVector a
+  modulus = sqrt . modulusSq
+  modulusSq (ComplexDouble a) = SIMD.sumVector $ a*a
