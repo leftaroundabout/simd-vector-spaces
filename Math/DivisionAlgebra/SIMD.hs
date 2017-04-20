@@ -62,3 +62,24 @@ instance VectorSpace (Complex Double) where
   {-# INLINE (*^) #-}
   (*^) = (*)
   
+instance Show (Complex Double) where
+  showsPrec p (ComplexDouble a) = showParen (p>6) $ shows r . ("+:"++) . shows i
+   where (r,i) = SIMD.unpackVector a
+
+
+infixl 6 +:
+class VectorSpace c => DivisionAlgebra c where
+  type RealPart c :: *
+  type ImagPart c :: *
+  (+:) :: RealPart c -> ImagPart c -> c
+  realPart :: c -> RealPart c
+  imagPart :: c -> ImagPart c
+
+instance DivisionAlgebra (Complex Double) where
+  type RealPart (Complex Double) = Double
+  type ImagPart (Complex Double) = Double
+  x+:y = ComplexDouble $ SIMD.packVector (x,y)
+  realPart (ComplexDouble a) = r
+   where (r, _) = SIMD.unpackVector a
+  imagPart (ComplexDouble a) = i
+   where (_, i) = SIMD.unpackVector a
