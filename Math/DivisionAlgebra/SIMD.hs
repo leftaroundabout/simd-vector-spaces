@@ -39,7 +39,7 @@ instance Num (Complex Double) where
   ComplexDouble a * ComplexDouble b = ComplexDouble
       $ a * SIMD.broadcastVector rb + SIMD.packVector (-ia, ra) * SIMD.broadcastVector ib
    where (ra, ia) = SIMD.unpackVector a
-         (rb, ib) = SIMD.unpackVector a
+         (rb, ib) = SIMD.unpackVector b
   {-# INLINE negate #-}
   negate (ComplexDouble a) = ComplexDouble $ negate a
   {-# INLINE abs #-}
