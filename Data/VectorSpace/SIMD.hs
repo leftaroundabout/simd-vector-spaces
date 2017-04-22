@@ -16,8 +16,14 @@
 {-# LANGUAGE ScopedTypeVariables     #-}
 {-# LANGUAGE UnicodeSyntax           #-}
 {-# LANGUAGE CPP                     #-}
+{-# LANGUAGE PatternSynonyms         #-}
+{-# LANGUAGE ViewPatterns            #-}
 
-module Data.VectorSpace.SIMD (Complex) where
+module Data.VectorSpace.SIMD ( ℝ, pattern ℝ
+                             , ℝ², pattern ℝ²
+                             , ℝ³, pattern ℝ³
+                             , ℝ⁴, pattern ℝ⁴
+                             , Complex) where
 
 import Math.DivisionAlgebra.SIMD
 
@@ -107,3 +113,33 @@ instance KnownDirectSum ℝ² ℝ² where
 
 instance KnownDirectSum (DirectSum u v) w
 
+
+
+type family V2 a where
+  V2 ℝ = ℝ²
+
+-- | Provided for consistency. @ℝ n@ is equivalent to @n@, restricted to type 'Double'.
+pattern ℝ :: ℝ -> ℝ
+pattern ℝ x = x
+
+pattern ℝ² :: ℝ -> ℝ -> ℝ²
+pattern ℝ² x y <- R² (SIMD.unpackVector -> (x,y))
+ where ℝ² x y = R² $ SIMD.packVector (x,y)
+
+pattern ℝ³ :: ℝ -> ℝ -> ℝ -> ℝ³
+pattern ℝ³ x y z <- R³ (SIMD.unpackVector -> (_,x,y,z))
+ where ℝ³ x y z = R³ $ SIMD.packVector (0,x,y,z)
+
+pattern ℝ⁴ :: ℝ -> ℝ -> ℝ -> ℝ -> ℝ⁴
+pattern ℝ⁴ x y z w<- R⁴ (SIMD.unpackVector -> (x,y,z,w))
+ where ℝ⁴ x y z w = R⁴ $ SIMD.packVector (x,y,z,w)
+
+instance Show ℝ² where
+  showsPrec p (ℝ² x y) = showParen (p>9) $ ("ℝ² "++)
+     . showsPrec 10 x.(' ':).showsPrec 10 y
+instance Show ℝ³ where
+  showsPrec p (ℝ³ x y z) = showParen (p>9) $ ("ℝ³ "++)
+     . showsPrec 10 x.(' ':).showsPrec 10 y.(' ':).showsPrec 10 z
+instance Show ℝ⁴ where
+  showsPrec p (ℝ⁴ x y z w) = showParen (p>9) $ ("ℝ⁴ "++)
+     . showsPrec 10 x.(' ':).showsPrec 10 y.(' ':).showsPrec 10 z.(' ':).showsPrec 10 w
