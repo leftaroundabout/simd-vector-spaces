@@ -45,7 +45,10 @@ instance AdditiveGroup (V) where {  \
   negateV (C a) = C $ negate a };      \
 instance VectorSpace V where {          \
   type Scalar (V) = (F);                 \
-  μ *^ C a = C $ SIMD.broadcastVector μ * a }
+  μ *^ C a = C                            \
+    $ SIMD.broadcastVector μ * a };        \
+instance InnerSpace V where {               \
+  C a <.> C b = SIMD.sumVector $ a * b }
 
 SIMDVSInstances(ℝ², R², ℝ)
 SIMDVSInstances(ℝ³, R³, ℝ)
