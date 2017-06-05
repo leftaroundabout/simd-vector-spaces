@@ -17,6 +17,7 @@ cabal-version:       >=1.10
 
 library
   exposed-modules:     Data.VectorSpace.SIMD
+                       , Data.VectorSpace.SIMD.FiniteSupportedSequence
                        , Math.DivisionAlgebra.SIMD
   -- other-modules:       
   other-extensions:    TypeFamilies, FlexibleInstances, FlexibleContexts, ScopedTypeVariables, UnicodeSyntax
