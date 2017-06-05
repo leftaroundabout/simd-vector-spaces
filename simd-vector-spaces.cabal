@@ -17,10 +17,14 @@ cabal-version:       >=1.10
 
 library
   exposed-modules:     Data.VectorSpace.SIMD
+                       , Data.VectorSpace.SIMD.FiniteSupportedSequence
                        , Math.DivisionAlgebra.SIMD
   -- other-modules:       
   other-extensions:    TypeFamilies, FlexibleInstances, FlexibleContexts, ScopedTypeVariables, UnicodeSyntax
-  build-depends:       base >=4.8 && <4.9, vector-space >=0.10 && <0.11, primitive-simd >=0.1 && <0.2
+  build-depends:       base >=4.8 && <4.9
+                       , vector-space >=0.10 && <0.11
+                       , primitive-simd >=0.1 && <0.2
+                       , vector
   -- hs-source-dirs:      
   ghc-options:         -fllvm -mavx2
   default-language:    Haskell2010
