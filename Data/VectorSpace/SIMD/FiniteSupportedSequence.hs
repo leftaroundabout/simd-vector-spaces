@@ -37,7 +37,9 @@ import qualified Data.Primitive.SIMD as SIMD
 import GHC.Exts (IsList(..))
 
 trimTrailingZeroes :: (Num t, Eq t, Arr.Vector v t) => v t -> v t
-trimTrailingZeroes = undefined
+trimTrailingZeroes v = Arr.force $ Arr.take (Arr.length v - ntz) v
+ where ntz = Arr.foldl (\a n -> if n==0 then a+1
+                                        else 0   ) 0 v
 
 class AdditiveGroup (FinSuppSeq t v) => PackSequence t v where
   data FinSuppSeq t v :: *
@@ -83,9 +85,8 @@ instance AdditiveGroup (FinSuppSeq ℝ ℝ) where
   
 instance IsList (FinSuppSeq ℝ ℝ) where
   type Item (FinSuppSeq ℝ ℝ) = ℝ
-  fromList l = ℝFinSuppSeqℝ (length zeroes) $ Arr.fromList rest
-   where (zeroes,rest) = break (/=0) l
-  toList (ℝFinSuppSeqℝ i₀ v) = replicate i₀ 0 ++ Arr.toList v
+  fromList = fromArray . Arr.fromList
+  toList = Arr.toList . toArray
 
 instance Show (FinSuppSeq ℝ ℝ) where
   show = show . toList
