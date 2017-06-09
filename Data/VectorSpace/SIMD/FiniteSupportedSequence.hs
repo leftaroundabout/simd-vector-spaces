@@ -90,10 +90,10 @@ addFinsuppSeqs (i₀₀, v₀) (i₀₁, v₁) = (i₀s, vs)
                     return zs
          i₀s = min i₀₀ i₀₁
   
-instance IsList (FinSuppSeq ℝ ℝ) where
-  type Item (FinSuppSeq ℝ ℝ) = ℝ
+instance PackSequence t v => IsList (FinSuppSeq t v) where
+  type Item (FinSuppSeq t v) = v
   fromList = fromArray . Arr.fromList
   toList = Arr.toList . toArray
 
-instance Show (FinSuppSeq ℝ ℝ) where
+instance (PackSequence t v, Show v) => Show (FinSuppSeq t v) where
   show = show . toList
