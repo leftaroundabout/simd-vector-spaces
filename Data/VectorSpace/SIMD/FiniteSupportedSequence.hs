@@ -58,7 +58,12 @@ instance PackSequence ℝ ℝ where
 instance AdditiveGroup (FinSuppSeq ℝ ℝ) where
   zeroV = ℝFinSuppSeqℝ 0 $ Arr.empty
   negateV (ℝFinSuppSeqℝ i₀ v) = ℝFinSuppSeqℝ i₀ $ Arr.map negate v
-  ℝFinSuppSeqℝ i₀₀ v₀ ^+^ ℝFinSuppSeqℝ i₀₁ v₁ = ℝFinSuppSeqℝ i₀s vs
+  ℝFinSuppSeqℝ i₀₀ v₀ ^+^ ℝFinSuppSeqℝ i₀₁ v₁ = uncurry ℝFinSuppSeqℝ
+     $ addFinsuppSeqs (i₀₀, v₀) (i₀₁, v₁)
+
+addFinsuppSeqs :: (Num n, UArr.Unbox n)
+           => (Int, UArr.Vector n) -> (Int, UArr.Vector n) -> (Int, UArr.Vector n)
+addFinsuppSeqs (i₀₀, v₀) (i₀₁, v₁) = (i₀s, vs)
    where vs = case (compare i₀₀ i₀₁, compare (i₀₀+Arr.length v₀) (i₀₁+Arr.length v₁)) of
                (EQ,EQ) -> Arr.zipWith (+) v₀ v₁
                (EQ,LT) -> Arr.zipWith (+) v₀ v₁ Arr.++ Arr.drop (Arr.length v₀) v₁
