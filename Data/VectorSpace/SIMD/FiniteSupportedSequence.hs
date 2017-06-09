@@ -97,3 +97,27 @@ instance PackSequence t v => IsList (FinSuppSeq t v) where
 
 instance (PackSequence t v, Show v) => Show (FinSuppSeq t v) where
   show = show . toList
+
+
+
+
+instance PackSequence SIMD.DoubleX4 ℝ where
+  data FinSuppSeq SIMD.DoubleX4 ℝ = ℝ⁴FinSuppSeqℝ Int (UArr.Vector SIMD.DoubleX4)
+  toArray (ℝ⁴FinSuppSeqℝ nLeading4Zeroes v)
+      = Arr.replicate (4*nLeading4Zeroes) 0
+          Arr.++ (Arr.convert v >>= lrep . SIMD.unpackVector)
+   where lrep (x,y,z,w) = Arr.fromList [x,y,z,w]
+  fromArray vb = ℝ⁴FinSuppSeqℝ (Arr.length leading4Zeroes) $ trimTrailingZeroes vp
+   where (leading4Zeroes, vp) = UArr.span (==0) vpacked
+         vpacked = Arr.generate nby4
+                   $ \i' -> let i = i'*4
+                                at j | j<Arr.length vb  = Arr.unsafeIndex vb j
+                                     | otherwise        = 0
+                            in SIMD.packVector (at i, at (i+1), at (i+2), at (i+3))
+         nby4 = (Arr.length vb + 3)`div`4
+
+instance AdditiveGroup (FinSuppSeq SIMD.DoubleX4 ℝ) where
+  zeroV = ℝ⁴FinSuppSeqℝ 0 $ Arr.empty
+  negateV (ℝ⁴FinSuppSeqℝ i₀ v) = ℝ⁴FinSuppSeqℝ i₀ $ Arr.map negate v
+  ℝ⁴FinSuppSeqℝ i₀₀ v₀ ^+^ ℝ⁴FinSuppSeqℝ i₀₁ v₁ = uncurry ℝ⁴FinSuppSeqℝ
+     $ addFinsuppSeqs (i₀₀, v₀) (i₀₁, v₁)
