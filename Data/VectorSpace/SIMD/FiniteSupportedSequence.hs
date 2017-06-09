@@ -31,15 +31,17 @@ import qualified Data.Vector.Generic as Arr
 import qualified Data.Vector.Generic.Mutable as MArr
 import qualified Data.Vector as BArr
 import qualified Data.Vector.Unboxed as UArr
+import qualified Data.Vector.Fusion.Bundle as ABdl
 
 import qualified Data.Primitive.SIMD as SIMD
 
 import GHC.Exts (IsList(..))
 
 trimTrailingZeroes :: (Num t, Eq t, Arr.Vector v t) => v t -> v t
-trimTrailingZeroes v = Arr.force $ Arr.take (Arr.length v - ntz) v
- where ntz = Arr.foldl (\a n -> if n==0 then a+1
-                                        else 0   ) 0 v
+trimTrailingZeroes v = Arr.force $ Arr.take nlnz v
+ where nlnz = case ABdl.findIndex (/=0) $ Arr.streamR v of
+         Just nrz -> Arr.length v - nrz
+         Nothing  -> 0
 
 class AdditiveGroup (FinSuppSeq t v) => PackSequence t v where
   data FinSuppSeq t v :: *
