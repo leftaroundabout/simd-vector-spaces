@@ -35,6 +35,8 @@ import qualified Data.Vector.Fusion.Bundle as ABdl
 
 import qualified Data.Primitive.SIMD as SIMD
 
+import Data.Int
+
 import GHC.Exts (IsList(..))
 
 trimTrailingZeroes :: (Num t, Eq t, Arr.Vector v t) => v t -> v t
@@ -47,6 +49,9 @@ class AdditiveGroup (FinSuppSeq t v) => PackSequence t v where
   data FinSuppSeq t v :: *
   toArray :: FinSuppSeq t v -> BArr.Vector v
   fromArray :: BArr.Vector v -> FinSuppSeq t v
+  reoptimiseSequence :: FinSuppSeq t v -> FinSuppSeq t v
+  reoptimiseSequence = id
+  localBitDepth :: Functor p => p (t,v) -> Int
 
 instance PackSequence ℝ ℝ where
   data FinSuppSeq ℝ ℝ = ℝFinSuppSeqℝ Int (UArr.Vector ℝ)
@@ -54,6 +59,7 @@ instance PackSequence ℝ ℝ where
       = Arr.replicate nLeadingZeroes 0 Arr.++ Arr.convert v
   fromArray vb = ℝFinSuppSeqℝ (Arr.length leadingZeroes) $ trimTrailingZeroes vp
    where (leadingZeroes, vp) = UArr.span (==0) $ Arr.convert vb
+  localBitDepth _ = 52
 
 instance AdditiveGroup (FinSuppSeq ℝ ℝ) where
   zeroV = ℝFinSuppSeqℝ 0 $ Arr.empty
@@ -115,9 +121,86 @@ instance PackSequence SIMD.DoubleX4 ℝ where
                                      | otherwise        = 0
                             in SIMD.packVector (at i, at (i+1), at (i+2), at (i+3))
          nby4 = (Arr.length vb + 3)`div`4
+  localBitDepth _ = 52
 
 instance AdditiveGroup (FinSuppSeq SIMD.DoubleX4 ℝ) where
   zeroV = ℝ⁴FinSuppSeqℝ 0 $ Arr.empty
   negateV (ℝ⁴FinSuppSeqℝ i₀ v) = ℝ⁴FinSuppSeqℝ i₀ $ Arr.map negate v
   ℝ⁴FinSuppSeqℝ i₀₀ v₀ ^+^ ℝ⁴FinSuppSeqℝ i₀₁ v₁ = uncurry ℝ⁴FinSuppSeqℝ
      $ addFinsuppSeqs (i₀₀, v₀) (i₀₁, v₁)
+
+
+type Exponent = Int
+
+instance PackSequence SIMD.Int8X16 ℝ where
+  data FinSuppSeq SIMD.Int8X16 ℝ
+      = ℤ⁸'¹⁶FinSuppSeqℝ Int Exponent Int8 (UArr.Vector SIMD.Int8X16)
+  toArray (ℤ⁸'¹⁶FinSuppSeqℝ nLeading16Zeroes magn _ v)
+      = Arr.replicate (16*nLeading16Zeroes) 0
+          Arr.++ (Arr.convert v >>= lrep . SIMD.unpackVector)
+   where lrep (α,β,γ,δ,ε,ζ,η,θ,ι,κ,λ,μ,ν,ξ,ο,π)
+             = Arr.map ((*2^^magn) . fromIntegral)
+                 $ Arr.fromList [α,β,γ,δ,ε,ζ,η,θ,ι,κ,λ,μ,ν,ξ,ο,π]
+  fromArray vb = ℤ⁸'¹⁶FinSuppSeqℝ (Arr.length leading16Zeroes) magn absMax
+                   $ trimTrailingZeroes vp
+   where (leading16Zeroes, vp) = UArr.span (==0) vpacked
+         vpacked = Arr.generate nby4
+                   $ \i' -> let i = i'*16
+                                at j | j<Arr.length vb 
+                                         = round $ Arr.unsafeIndex vb j / 2^^magn
+                                     | otherwise        = 0
+                            in SIMD.packVector
+                                ( at i     , at (i+1),  at (i+2),  at (i+3)
+                                , at (i+4) , at (i+5),  at (i+6),  at (i+7)
+                                , at (i+8) , at (i+9),  at (i+10), at (i+11)
+                                , at (i+12), at (i+13), at (i+14), at (i+15) )
+         absMax = round $ origMax / 2^^magn
+         origMax = Arr.maximum $ Arr.map abs vb
+         bitDepth = fromIntegral $ localBitDepth [(Arr.head vpacked, origMax)]
+         magn = floor $ logBase 2 (max tinyVal origMax) - bitDepth
+         nby4 = (Arr.length vb + 3)`div`4
+  reoptimiseSequence (ℤ⁸'¹⁶FinSuppSeqℝ nlz magn _ v)
+                    = ℤ⁸'¹⁶FinSuppSeqℝ (nlz+nExtralz) magn' absMax v'
+   where absMax = UArr.foldl' (\m -> max m . SIMD.foldVector max) 0 $ UArr.map abs v
+         μ = max 0 $ round (logBase 2 (max tinyVal $ fromIntegral absMax) - bitDepth)
+         bitDepth = fromIntegral $ localBitDepth [(Arr.head v, 0::ℝ)]
+         nExtralz = maybe 0 id $ UArr.findIndex (/=0) v'₀
+         magn' = undefined
+         v'₀ | μ>0        = UArr.map (`SIMD.quotVector` SIMD.broadcastVector (2^μ)) v
+             | otherwise  = v
+         v' = trimTrailingZeroes $ UArr.drop nExtralz v'₀
+  localBitDepth _ = 4
+
+instance AdditiveGroup (FinSuppSeq SIMD.Int8X16 ℝ) where
+  zeroV = ℤ⁸'¹⁶FinSuppSeqℝ 0 0 0 $ Arr.empty
+  negateV (ℤ⁸'¹⁶FinSuppSeqℝ i₀ magn absMax v)
+      = ℤ⁸'¹⁶FinSuppSeqℝ i₀ magn absMax $ Arr.map negate v
+  ℤ⁸'¹⁶FinSuppSeqℝ i₀₀ magn₀ absMax₀ v₀ ^+^ ℤ⁸'¹⁶FinSuppSeqℝ i₀₁ magn₁ absMax₁ v₁
+      = (if needsRenormalisation then reoptimiseSequence else id)
+          $ ℤ⁸'¹⁶FinSuppSeqℝ i₀s magns absMaxs vs
+   where (i₀s, vs) = addFinsuppSeqs (i₀₀, v₀') (i₀₁, v₁')
+         [v₀', v₁'] = [ (if μ>0
+                          then UArr.map (`SIMD.quotVector` SIMD.broadcastVector (2^μ))
+                          else id) v
+                      | (v,μ) <- [(v₀,μ₀),(v₁,μ₁)] ]
+         absMaxs :: Int8
+         absMaxs = sum [ absMax `div` (2^μ)
+                       | (absMax,μ) <- [(absMax₀,μ₀), (absMax₁,μ₁)] ]
+         μ₀, μ₁ :: Int
+         ((μ₀, μ₁), (magns, needsRenormalisation))
+           = case compare magn₀ magn₁ of
+              LT | absMax₀ < maxBound`div`2
+                    -> ((magn₁ - magn₀, 0), (magn₁, False))
+              GT | absMax₁ < maxBound`div`2
+                    -> ((0, magn₀ - magn₁), (magn₀, False))
+              EQ | absMax₀ < maxBound`div`2 && absMax₁ < maxBound`div`2
+                    -> ((0, 0), (magn₁, False))
+              _  | maxMagn <- max magn₀ magn₁
+                    -> ( (1+maxMagn-magn₀, 1+maxMagn-magn₁)
+                       , (maxMagn-1, True) )
+
+
+
+
+tinyVal :: Double
+tinyVal = 3e-324 
