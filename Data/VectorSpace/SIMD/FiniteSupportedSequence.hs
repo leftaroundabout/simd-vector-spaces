@@ -39,6 +39,8 @@ import Data.Int
 
 import GHC.Exts (IsList(..))
 
+import Test.QuickCheck.Arbitrary
+
 trimTrailingZeroes :: (Num t, Eq t, Arr.Vector v t) => v t -> v t
 trimTrailingZeroes v = Arr.force $ Arr.take nlnz v
  where nlnz = case ABdl.findIndex (/=0) $ Arr.streamR v of
@@ -204,3 +206,9 @@ instance AdditiveGroup (FinSuppSeq SIMD.Int8X16 ℝ) where
 
 tinyVal :: Double
 tinyVal = 3e-324 
+
+
+
+instance Arbitrary (FinSuppSeq ℝ ℝ) where arbitrary = fmap fromList arbitrary
+instance Arbitrary (FinSuppSeq SIMD.DoubleX4 ℝ) where arbitrary = fmap fromList arbitrary
+instance Arbitrary (FinSuppSeq SIMD.Int8X16 ℝ) where arbitrary = fmap fromList arbitrary
