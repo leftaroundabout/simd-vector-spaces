@@ -36,6 +36,8 @@ tests = testGroup "Vector-space identities"
   [testGroup "(checked by QuickCheck)"
      [ testSimilarity "distrib @(ℝ,ℝ)" 1e-14
         (prop_distrib :: ℝ -> (ℝ,ℝ) -> (ℝ,ℝ) -> Similarity)
+     , testSimilarity "distrib @ℝ³" 1e-14
+        (prop_distrib :: ℝ -> ℝ³ -> ℝ³ -> Similarity)
      ]
   ]
 

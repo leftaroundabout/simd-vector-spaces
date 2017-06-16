@@ -32,6 +32,7 @@ import Data.VectorSpace
 
 import qualified Data.Primitive.SIMD as SIMD
 
+import Test.QuickCheck.Arbitrary
 
 type ℝ = Double
 newtype ℝ² = R² SIMD.DoubleX2
@@ -146,3 +147,9 @@ instance Show ℝ³ where
 instance Show ℝ⁴ where
   showsPrec p (ℝ⁴ x y z w) = showParen (p>9) $ ("ℝ⁴ "++)
      . showsPrec 10 x.(' ':).showsPrec 10 y.(' ':).showsPrec 10 z.(' ':).showsPrec 10 w
+
+
+
+instance Arbitrary ℝ² where arbitrary = fmap (R² . SIMD.packVector) arbitrary
+instance Arbitrary ℝ³ where arbitrary = fmap (R³ . SIMD.packVector) arbitrary
+instance Arbitrary ℝ⁴ where arbitrary = fmap (R⁴ . SIMD.packVector) arbitrary
