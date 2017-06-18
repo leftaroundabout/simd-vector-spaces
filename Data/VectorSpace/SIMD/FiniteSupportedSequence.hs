@@ -69,6 +69,11 @@ instance AdditiveGroup (FinSuppSeq ℝ ℝ) where
   ℝFinSuppSeqℝ i₀₀ v₀ ^+^ ℝFinSuppSeqℝ i₀₁ v₁ = uncurry ℝFinSuppSeqℝ
      $ addFinsuppSeqs (i₀₀, v₀) (i₀₁, v₁)
 
+instance VectorSpace (FinSuppSeq ℝ ℝ) where
+  type Scalar (FinSuppSeq ℝ ℝ) = ℝ
+  μ *^ ℝFinSuppSeqℝ i₀ v
+      = ℝFinSuppSeqℝ i₀ $ Arr.map (* μ) v
+
 addFinsuppSeqs :: (Num n, UArr.Unbox n)
            => (Int, UArr.Vector n) -> (Int, UArr.Vector n) -> (Int, UArr.Vector n)
 addFinsuppSeqs (i₀₀, v₀) (i₀₁, v₁) = (i₀s, vs)
@@ -130,6 +135,11 @@ instance AdditiveGroup (FinSuppSeq SIMD.DoubleX4 ℝ) where
   negateV (ℝ⁴FinSuppSeqℝ i₀ v) = ℝ⁴FinSuppSeqℝ i₀ $ Arr.map negate v
   ℝ⁴FinSuppSeqℝ i₀₀ v₀ ^+^ ℝ⁴FinSuppSeqℝ i₀₁ v₁ = uncurry ℝ⁴FinSuppSeqℝ
      $ addFinsuppSeqs (i₀₀, v₀) (i₀₁, v₁)
+
+instance VectorSpace (FinSuppSeq SIMD.DoubleX4 ℝ) where
+  type Scalar (FinSuppSeq SIMD.DoubleX4 ℝ) = ℝ
+  μ *^ (ℝ⁴FinSuppSeqℝ i₀ v)
+      = ℝ⁴FinSuppSeqℝ i₀ $ Arr.map (* SIMD.broadcastVector μ) v
 
 
 type Exponent = Int
