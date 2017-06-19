@@ -231,7 +231,10 @@ tinyVal = 3e-324
 
 instance Arbitrary (FinSuppSeq ℝ ℝ) where
   arbitrary = fmap (fromList . \(lzs,v) -> map (\()->0) lzs++v) $ arbitrary
+  shrink = map fromList . shrink . toList
 instance Arbitrary (FinSuppSeq SIMD.DoubleX4 ℝ) where
   arbitrary = fmap (fromList . \(lzs,v) -> map (\()->0) lzs++v) $ arbitrary
+  shrink = map fromList . shrink . toList
 instance Arbitrary (FinSuppSeq SIMD.Int8X16 ℝ) where
   arbitrary = fmap (fromList . \(lzs,v) -> map (\()->0) lzs++v) $ arbitrary
+  shrink = map fromList . shrink . toList
