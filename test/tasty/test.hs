@@ -15,6 +15,9 @@ module Main where
 
 import Math.DivisionAlgebra.SIMD
 import Data.VectorSpace.SIMD
+import Data.VectorSpace.SIMD.FiniteSupportedSequence
+
+import qualified Data.Primitive.SIMD as SIMD
 
 import Data.AdditiveGroup
 import Data.VectorSpace
@@ -38,6 +41,11 @@ tests = testGroup "Vector-space identities"
         (prop_distrib :: ℝ -> (ℝ,ℝ) -> (ℝ,ℝ) -> Similarity)
      , testSimilarity "distrib @ℝ³" 1e-14
         (prop_distrib :: ℝ -> ℝ³ -> ℝ³ -> Similarity)
+     , testSimilarity "distrib @ℝⁿ" 1e-14
+        (prop_distrib :: ℝ -> FinSuppSeq ℝ ℝ -> FinSuppSeq ℝ ℝ -> Similarity)
+     , testSimilarity "distrib @ℝ⁴ⁿ" 1e-14
+        (prop_distrib :: ℝ -> FinSuppSeq SIMD.DoubleX4 ℝ -> FinSuppSeq SIMD.DoubleX4 ℝ
+                                 -> Similarity)
      ]
   ]
 

@@ -45,5 +45,6 @@ test-suite test
     , tasty >= 0.7
     , tasty-quickcheck
     , vector-space
+    , primitive-simd
     , simd-vector-spaces
 

@@ -74,6 +74,11 @@ instance VectorSpace (FinSuppSeq ℝ ℝ) where
   μ *^ ℝFinSuppSeqℝ i₀ v
       = ℝFinSuppSeqℝ i₀ $ Arr.map (* μ) v
 
+instance InnerSpace (FinSuppSeq ℝ ℝ) where
+  ℝFinSuppSeqℝ i₀ v <.> ℝFinSuppSeqℝ j₀ w
+   | i₀ > j₀    = UArr.sum $ UArr.zipWith (*) v (UArr.drop (i₀-j₀) w)
+   | otherwise  = UArr.sum $ UArr.zipWith (*) (UArr.drop (j₀-i₀) v) w
+
 addFinsuppSeqs :: (Num n, UArr.Unbox n)
            => (Int, UArr.Vector n) -> (Int, UArr.Vector n) -> (Int, UArr.Vector n)
 addFinsuppSeqs (i₀₀, v₀) (i₀₁, v₁) = (i₀s, vs)
@@ -140,6 +145,11 @@ instance VectorSpace (FinSuppSeq SIMD.DoubleX4 ℝ) where
   type Scalar (FinSuppSeq SIMD.DoubleX4 ℝ) = ℝ
   μ *^ (ℝ⁴FinSuppSeqℝ i₀ v)
       = ℝ⁴FinSuppSeqℝ i₀ $ Arr.map (* SIMD.broadcastVector μ) v
+
+instance InnerSpace (FinSuppSeq SIMD.DoubleX4 ℝ) where
+  ℝ⁴FinSuppSeqℝ i₀ v <.> ℝ⁴FinSuppSeqℝ j₀ w
+   | i₀ > j₀    = SIMD.sumVector . UArr.sum $ UArr.zipWith (*) v (UArr.drop (i₀-j₀) w)
+   | otherwise  = SIMD.sumVector . UArr.sum $ UArr.zipWith (*) (UArr.drop (j₀-i₀) v) w
 
 
 type Exponent = Int
