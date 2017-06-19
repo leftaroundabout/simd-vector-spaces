@@ -73,7 +73,9 @@ instance (QC.Arbitrary a, Show a, SimTestable sim) => SimTestable (a -> sim) whe
 
 testSimilarity :: SimTestable a => TestName -> ℝ -> a -> TestTree
 testSimilarity descript ε a = testGroup descript
-       [ QC.testProperty ("with ε="++showOOM ε++"") $ epsiloned ε a ]
+       [ QC.testProperty ("with ε="++showOOM ε++"") $ epsiloned ε a
+       , QC.testProperty ("with ε="++showOOM (ε/100)++"") . QC.expectFailure
+               $ epsiloned (ε/100) a ]
 
 
 
