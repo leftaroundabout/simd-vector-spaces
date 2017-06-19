@@ -10,6 +10,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ConstraintKinds  #-}
 {-# LANGUAGE TypeFamilies     #-}
+{-# LANGUAGE LambdaCase       #-}
 
 module Main where
 
@@ -63,6 +64,18 @@ instance (QC.Arbitrary a, Show a, SimTestable sim) => SimTestable (a -> sim) whe
   epsiloned ε sim = epsiloned ε . sim
 
 testSimilarity :: SimTestable a => TestName -> ℝ -> a -> TestTree
-testSimilarity descript ε a = QC.testProperty (descript++", with ε="++show ε++"")
-                                $ epsiloned ε a
+testSimilarity descript ε a = testGroup descript
+       [ QC.testProperty ("with ε="++showOOM ε++"") $ epsiloned ε a ]
 
+
+
+showOOM :: Double -> String
+showOOM n = case m₁₀ of
+   1 -> "10"++showSup e₁₀
+   _ -> show m₁₀ ++ "×10" ++ showSup e₁₀
+ where e₁₀ = floor $ logBase 10 n
+       m₁₀ = round $ n / 10^^e₁₀
+       showSup = map (\case
+        {'0'->'⁰';'1'->'¹';'2'->'²';'3'->'³';'4'->'⁴';'5'->'⁵';'6'->'⁶'
+        ;'7'->'⁷';'8'->'⁸';'9'->'⁹';'-'->'⁻';c->c})
+        . show
