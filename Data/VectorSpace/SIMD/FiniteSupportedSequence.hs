@@ -58,7 +58,7 @@ class AdditiveGroup (FinSuppSeq t v) => PackSequence t v where
 instance PackSequence ℝ ℝ where
   data FinSuppSeq ℝ ℝ = ℝFinSuppSeqℝ Int (UArr.Vector ℝ)
   toArray (ℝFinSuppSeqℝ nLeadingZeroes v)
-      = Arr.replicate nLeadingZeroes 0 Arr.++ Arr.convert v
+      = Arr.replicate nLeadingZeroes 0 Arr.++ Arr.convert (trimTrailingZeroes v)
   fromArray vb = ℝFinSuppSeqℝ (Arr.length leadingZeroes) $ trimTrailingZeroes vp
    where (leadingZeroes, vp) = UArr.span (==0) $ Arr.convert vb
   localBitDepth _ = 52
@@ -123,7 +123,7 @@ instance PackSequence SIMD.DoubleX4 ℝ where
   data FinSuppSeq SIMD.DoubleX4 ℝ = ℝ⁴FinSuppSeqℝ Int (UArr.Vector SIMD.DoubleX4)
   toArray (ℝ⁴FinSuppSeqℝ nLeading4Zeroes v)
       = Arr.replicate (4*nLeading4Zeroes) 0
-          Arr.++ (Arr.convert v >>= lrep . SIMD.unpackVector)
+          Arr.++ (trimTrailingZeroes $ Arr.convert v >>= lrep . SIMD.unpackVector)
    where lrep (x,y,z,w) = Arr.fromList [x,y,z,w]
   fromArray vb = ℝ⁴FinSuppSeqℝ (Arr.length leading4Zeroes) $ trimTrailingZeroes vp
    where (leading4Zeroes, vp) = UArr.span (==0) vpacked
@@ -229,6 +229,9 @@ tinyVal = 3e-324
 
 
 
-instance Arbitrary (FinSuppSeq ℝ ℝ) where arbitrary = fmap fromList arbitrary
-instance Arbitrary (FinSuppSeq SIMD.DoubleX4 ℝ) where arbitrary = fmap fromList arbitrary
-instance Arbitrary (FinSuppSeq SIMD.Int8X16 ℝ) where arbitrary = fmap fromList arbitrary
+instance Arbitrary (FinSuppSeq ℝ ℝ) where
+  arbitrary = fmap (fromList . \(lzs,v) -> map (\()->0) lzs++v) $ arbitrary
+instance Arbitrary (FinSuppSeq SIMD.DoubleX4 ℝ) where
+  arbitrary = fmap (fromList . \(lzs,v) -> map (\()->0) lzs++v) $ arbitrary
+instance Arbitrary (FinSuppSeq SIMD.Int8X16 ℝ) where
+  arbitrary = fmap (fromList . \(lzs,v) -> map (\()->0) lzs++v) $ arbitrary
