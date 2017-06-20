@@ -36,6 +36,7 @@ import qualified Data.Vector.Fusion.Bundle as ABdl
 import qualified Data.Primitive.SIMD as SIMD
 
 import Data.Int
+import Data.Bits
 
 import GHC.Exts (IsList(..))
 
@@ -159,7 +160,7 @@ instance PackSequence SIMD.Int8X16 ℝ where
       = ℤ⁸'¹⁶FinSuppSeqℝ Int Exponent Int8 (UArr.Vector SIMD.Int8X16)
   toArray (ℤ⁸'¹⁶FinSuppSeqℝ nLeading16Zeroes magn _ v)
       = Arr.replicate (16*nLeading16Zeroes) 0
-          Arr.++ (Arr.convert v >>= lrep . SIMD.unpackVector)
+          Arr.++ (trimTrailingZeroes $ Arr.convert v >>= lrep . SIMD.unpackVector)
    where lrep (α,β,γ,δ,ε,ζ,η,θ,ι,κ,λ,μ,ν,ξ,ο,π)
              = Arr.map ((*2^^magn) . fromIntegral)
                  $ Arr.fromList [α,β,γ,δ,ε,ζ,η,θ,ι,κ,λ,μ,ν,ξ,ο,π]
@@ -222,6 +223,38 @@ instance AdditiveGroup (FinSuppSeq SIMD.Int8X16 ℝ) where
                        , (maxMagn-1, True) )
 
 
+instance VectorSpace (FinSuppSeq SIMD.Int8X16 ℝ) where
+  type Scalar (FinSuppSeq SIMD.Int8X16 ℝ) = ℝ
+  μ *^ (ℤ⁸'¹⁶FinSuppSeqℝ i₀ magn absMax v)
+    = (if absMax' > maxBound`div`2 then reoptimiseSequence else id)
+          . ℤ⁸'¹⁶FinSuppSeqℝ i₀ (magn+boost) absMax'
+                  $ Arr.map (intMul $ SIMD.broadcastVector μr) v
+   where μr = round $ μ * 2^(9-boost)
+         absMax' = i8mul μr absMax
+         boost
+          | μ > 0      = floor $ logBase 2 μ
+          | μ < 0      = floor $ logBase 2 (-μ)
+          | otherwise  = 0
+
+instance InnerSpace (FinSuppSeq SIMD.Int8X16 ℝ) where
+  ℤ⁸'¹⁶FinSuppSeqℝ i₀ magnv _ v <.> ℤ⁸'¹⁶FinSuppSeqℝ j₀ magnw _ w
+    | i₀ > j₀    = sclProd v (UArr.drop (i₀-j₀) w)
+    | otherwise  = sclProd (UArr.drop (j₀-i₀) v) w
+   where sclProd vt wt
+          | UArr.null vt || UArr.null wt  = 0
+          | otherwise  = μ * UArr.foldl'
+                          (\acc (vl,wl) ->
+                             acc
+                            + fromIntegral (SIMD.sumVector $ lsb vl * lsb wl)
+                            + 0x10 * (
+                                fromIntegral (SIMD.sumVector $ msb vl * lsb wl)
+                              + fromIntegral (SIMD.sumVector $ lsb vl * msb wl) )
+                            + 0x100 * fromIntegral (SIMD.sumVector $ msb vl * msb wl)
+                            ) 0
+                          (UArr.zip vt wt)
+         μ = 2^^(magnv + magnw)
+         msb = (`shiftRVector` 4)
+         lsb = (`bitwiseAndVector` SIMD.broadcastVector 0xf)
 
 
 tinyVal :: Double
@@ -238,3 +271,27 @@ instance Arbitrary (FinSuppSeq SIMD.DoubleX4 ℝ) where
 instance Arbitrary (FinSuppSeq SIMD.Int8X16 ℝ) where
   arbitrary = fmap (fromList . \(lzs,v) -> map (\()->0) lzs++v) $ arbitrary
   shrink = map fromList . shrink . toList
+
+
+
+class SIMD.SIMDVector v => SIMDBitsVector v where
+  -- | Right-shift each
+  shiftRVector :: v -> Int -> v
+  bitwiseAndVector :: v -> v -> v
+
+class SIMD.SIMDIntVector v => SIMDIntIntvVector v where
+  -- | Interpret the range @'minBound' .. 'maxBound'@ as the real interval @[-1, 1]@,
+  --   and perform multiplication of those numbers.
+  intMul :: v -> v -> v
+
+i8mul x y = xMsb * yMsb + (xLsb*yMsb)`shiftR`4 + (xMsb*yLsb)`shiftR`4
+ where xMsb = x`shiftR`4
+       yMsb = y`shiftR`4
+       xLsb = x.&.0xf
+       yLsb = y.&.0xf
+
+instance SIMDBitsVector SIMD.Int8X16 where
+  shiftRVector v shi = SIMD.mapVector (`shiftR`shi) v
+  bitwiseAndVector = SIMD.zipVector (.&.)
+instance SIMDIntIntvVector SIMD.Int8X16 where
+  intMul = SIMD.zipVector i8mul  -- this is very much not efficient!

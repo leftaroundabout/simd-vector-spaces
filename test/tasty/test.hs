@@ -55,8 +55,10 @@ tests = testGroup "Vector-space identities"
         (prop_listScalarProd :: FinSuppSeq ℝ ℝ -> FinSuppSeq ℝ ℝ -> Similarity)
      , testSimilarity "distrib @ℝ⁴ⁿ" 1e-14
         (prop_distrib :: ℝ -> FinSuppSeq ℝX4 ℝ -> FinSuppSeq ℝX4 ℝ -> Similarity)
-     , testSimilarity "scalarProd @ℝ⁴ⁿ" 1e-14
+     , testSimilarity "scalarProd @ℝ⁴ⁿ" 1e-13
         (prop_listScalarProd :: FinSuppSeq ℝX4 ℝ -> FinSuppSeq ℝX4 ℝ -> Similarity)
+     , testSimilarity "scalarProd @ℝ⊗⁸ℤ⁴ⁿ" 1
+        (prop_listScalarProd :: FinSuppSeq ℤ⁸X16 ℝ -> FinSuppSeq ℤ⁸X16 ℝ -> Similarity)
      ]
   ]
 
@@ -106,3 +108,4 @@ showOOM n = case m₁₀ of
 
 
 type ℝX4 = SIMD.DoubleX4
+type ℤ⁸X16 = SIMD.Int8X16
