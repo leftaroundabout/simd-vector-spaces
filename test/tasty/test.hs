@@ -26,6 +26,8 @@ import Data.VectorSpace
 import Test.Tasty
 import Test.Tasty.QuickCheck as QC
 
+import GHC.Exts (IsList (..))
+
 
 main = defaultMain tests
 
@@ -33,6 +35,11 @@ main = defaultMain tests
 
 prop_distrib :: CheckableVect v => Scalar v -> v -> v -> Similarity
 prop_distrib μ v w = μ *^ v ^+^ μ *^ w ≈ μ *^ (v^+^w)
+
+prop_listScalarProd :: ( InnerSpace v, Num (Scalar v), CheckableVect (Scalar v)
+                   , IsList v, Item v ~ Scalar v )
+                       => v -> v -> Similarity
+prop_listScalarProd v w = v<.>w ≈ sum (zipWith (*) (toList v) (toList w))
 
 
 tests :: TestTree
@@ -44,9 +51,12 @@ tests = testGroup "Vector-space identities"
         (prop_distrib :: ℝ -> ℝ³ -> ℝ³ -> Similarity)
      , testSimilarity "distrib @ℝⁿ" 1e-14
         (prop_distrib :: ℝ -> FinSuppSeq ℝ ℝ -> FinSuppSeq ℝ ℝ -> Similarity)
+     , testSimilarity "scalarProd @ℝⁿ" 0
+        (prop_listScalarProd :: FinSuppSeq ℝ ℝ -> FinSuppSeq ℝ ℝ -> Similarity)
      , testSimilarity "distrib @ℝ⁴ⁿ" 1e-14
-        (prop_distrib :: ℝ -> FinSuppSeq SIMD.DoubleX4 ℝ -> FinSuppSeq SIMD.DoubleX4 ℝ
-                                 -> Similarity)
+        (prop_distrib :: ℝ -> FinSuppSeq ℝX4 ℝ -> FinSuppSeq ℝX4 ℝ -> Similarity)
+     , testSimilarity "scalarProd @ℝ⁴ⁿ" 1e-14
+        (prop_listScalarProd :: FinSuppSeq ℝX4 ℝ -> FinSuppSeq ℝX4 ℝ -> Similarity)
      ]
   ]
 
@@ -57,7 +67,9 @@ newtype Similarity = Similarity {evalSimilarity :: ℝ -> Bool}
 
 infix 4 ≈
 (≈) :: CheckableVect v => v -> v -> Similarity
-v ≈ w = Similarity $ \ε -> magnitudeSq (v^-^w) * fromInteger (round $ recip ε^2)
+v ≈ w = Similarity simvw
+ where simvw 0 = magnitudeSq (v^-^w) == 0
+       simvw ε = magnitudeSq (v^-^w) * fromInteger (round $ recip ε^2)
                          <= (magnitudeSq v + magnitudeSq w)
 
 
@@ -73,13 +85,15 @@ instance (QC.Arbitrary a, Show a, SimTestable sim) => SimTestable (a -> sim) whe
 
 testSimilarity :: SimTestable a => TestName -> ℝ -> a -> TestTree
 testSimilarity descript ε a = testGroup descript
-       [ QC.testProperty ("with ε="++showOOM ε++"") $ epsiloned ε a
-       , QC.testProperty ("with ε="++showOOM (ε/100)++"") . QC.expectFailure
-               $ epsiloned (ε/100) a ]
+      $ QC.testProperty ("with ε="++showOOM ε++"") (epsiloned ε a)
+      : [ QC.testProperty ("with ε="++showOOM (ε/100)++"") . QC.expectFailure
+               $ epsiloned (ε/100) a
+        | ε>0 ]
 
 
 
 showOOM :: Double -> String
+showOOM 0 = "0"
 showOOM n = case m₁₀ of
    1 -> "10"++showSup e₁₀
    _ -> show m₁₀ ++ "×10" ++ showSup e₁₀
@@ -89,3 +103,6 @@ showOOM n = case m₁₀ of
         {'0'->'⁰';'1'->'¹';'2'->'²';'3'->'³';'4'->'⁴';'5'->'⁵';'6'->'⁶'
         ;'7'->'⁷';'8'->'⁸';'9'->'⁹';'-'->'⁻';c->c})
         . show
+
+
+type ℝX4 = SIMD.DoubleX4
