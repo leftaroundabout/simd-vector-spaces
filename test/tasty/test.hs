@@ -41,6 +41,8 @@ tests = testGroup "Vector-space identities"
         (prop_distrib :: ℝ -> ℝ³ -> ℝ³ -> Similarity)
      , testSimilarity "distrib @ℂ" 1e-14
         (prop_distrib :: ℂ -> ℂ -> ℂ -> Similarity)
+     , testSimilarity "distrib @ℂ²" 1e-14
+        (prop_distrib :: ℂ -> ℂ² -> ℂ² -> Similarity)
      ]
   ]
 
