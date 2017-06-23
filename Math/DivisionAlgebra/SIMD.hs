@@ -12,16 +12,22 @@
 {-# LANGUAGE FlexibleContexts        #-}
 {-# LANGUAGE ScopedTypeVariables     #-}
 {-# LANGUAGE UnicodeSyntax           #-}
+{-# LANGUAGE DefaultSignatures       #-}
+{-# LANGUAGE UndecidableInstances    #-}
 
 module Math.DivisionAlgebra.SIMD where
 
 import Data.AffineSpace
-import Data.VectorSpace
+import Data.VectorSpace hiding (magnitudeSq)
 import Data.Basis
 
 import qualified Data.Foldable as Foldable
 
 import qualified Data.Primitive.SIMD as SIMD
+
+import qualified Data.Complex as Prelude
+
+import Test.QuickCheck.Arbitrary
 
 
 data family Complex a
@@ -60,6 +66,15 @@ instance VectorSpace (Complex Double) where
   type Scalar (Complex Double) = Complex Double
   {-# INLINE (*^) #-}
   (*^) = (*)
+
+-- ^ @u <.> v  ≡  ̄u * v@ (i.e., sesquilinear and linear in the /second/ argument).
+instance InnerSpace (Complex Double) where
+  {-# INLINE (<.>) #-}
+  ComplexDouble a <.> ComplexDouble b = ComplexDouble
+      $ SIMD.packVector (ra,-ia) * SIMD.broadcastVector rb
+      + SIMD.packVector (ia, ra) * SIMD.broadcastVector ib
+   where (ra, ia) = SIMD.unpackVector a
+         (rb, ib) = SIMD.unpackVector b
   
 instance Show (Complex Double) where
   showsPrec p (ComplexDouble a) = showParen (p>6) $ shows r . ("+:"++) . shows i
@@ -67,7 +82,7 @@ instance Show (Complex Double) where
 
 
 infixl 6 +:
-class Num c => FieldAlgebra c where
+class (Num c, Num (RealPart c)) => FieldAlgebra c where
   type RealPart c :: *
   type ImagPart c :: *
   (+:) :: RealPart c -> ImagPart c -> c
@@ -94,3 +109,60 @@ instance FieldAlgebra (Complex Double) where
    where (_, i) = SIMD.unpackVector a
   modulus = sqrt . modulusSq
   modulusSq (ComplexDouble a) = SIMD.sumVector $ a*a
+
+instance FieldAlgebra Integer where
+  type RealPart Integer = Integer
+  type ImagPart Integer = ()
+  x+:() = x
+  realPart = id
+  imagPart = const ()
+  modulus = abs
+  modulusSq = (^2)
+instance FieldAlgebra Int where
+  type RealPart Int = Int
+  type ImagPart Int = ()
+  x+:() = x
+  realPart = id
+  imagPart = const ()
+  modulus = abs
+  modulusSq = (^2)
+
+fromStdComplex :: (FieldAlgebra c, RealPart c ~ s, ImagPart c ~ s)
+                    => Prelude.Complex s -> c
+fromStdComplex z = Prelude.realPart z +: Prelude.imagPart z
+
+toStdComplex :: (FieldAlgebra c, RealPart c ~ s, ImagPart c ~ s)
+                    => c -> Prelude.Complex s
+toStdComplex z = realPart z Prelude.:+ imagPart z
+
+instance Arbitrary (Complex Double) where
+  arbitrary = fromStdComplex <$> arbitrary
+  shrink = map fromStdComplex . shrink . toStdComplex
+
+
+
+
+class (InnerSpace v, FieldAlgebra (Scalar v)) => UnitarySpace v where
+  magnitudeSq :: v -> RealPart (Scalar v)
+  magnitude :: v -> RealPart (Scalar v)
+  default magnitude :: Floating (RealPart (Scalar v)) => v -> RealPart (Scalar v)
+  magnitude = sqrt . magnitudeSq
+
+
+instance UnitarySpace Double where magnitudeSq = (^2)
+instance UnitarySpace Integer where
+  magnitudeSq = (^2)
+  magnitude = abs
+instance UnitarySpace Int where
+  magnitudeSq = (^2)
+  magnitude = abs
+instance ( UnitarySpace a, UnitarySpace b
+         , Scalar a ~ Scalar b, Floating (RealPart (Scalar a)) )
+    => UnitarySpace (a,b) where
+  magnitudeSq (x,y) = magnitudeSq x + magnitudeSq y
+
+instance ( FieldAlgebra (Complex s)
+         , InnerSpace (Complex s), Scalar (Complex s) ~ Complex s )
+                   => UnitarySpace (Complex s) where
+  magnitudeSq = modulusSq
+  magnitude = modulus

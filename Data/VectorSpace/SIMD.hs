@@ -49,7 +49,9 @@ instance VectorSpace V where {          \
   μ *^ C a = C                            \
     $ SIMD.broadcastVector μ * a };        \
 instance InnerSpace V where {               \
-  C a <.> C b = SIMD.sumVector $ a * b }
+  C a <.> C b = SIMD.sumVector $ a * b };    \
+instance UnitarySpace V where {               \
+  magnitudeSq (C a) = SIMD.sumVector $ a*a }
 
 SIMDVSInstances(ℝ², R², ℝ)
 SIMDVSInstances(ℝ³, R³, ℝ)

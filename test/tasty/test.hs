@@ -18,7 +18,7 @@ import Math.DivisionAlgebra.SIMD
 import Data.VectorSpace.SIMD
 
 import Data.AdditiveGroup
-import Data.VectorSpace
+import Data.VectorSpace hiding (magnitudeSq)
 
 import Test.Tasty
 import Test.Tasty.QuickCheck as QC
@@ -39,12 +39,14 @@ tests = testGroup "Vector-space identities"
         (prop_distrib :: ℝ -> (ℝ,ℝ) -> (ℝ,ℝ) -> Similarity)
      , testSimilarity "distrib @ℝ³" 1e-14
         (prop_distrib :: ℝ -> ℝ³ -> ℝ³ -> Similarity)
+     , testSimilarity "distrib @ℂ" 1e-14
+        (prop_distrib :: ℂ -> ℂ -> ℂ -> Similarity)
      ]
   ]
 
 
 
-type CheckableVect v = (InnerSpace v, Num (Scalar v), Ord (Scalar v))
+type CheckableVect v = (UnitarySpace v, Ord (RealPart (Scalar v)))
 newtype Similarity = Similarity {evalSimilarity :: ℝ -> Bool}
 
 infix 4 ≈
