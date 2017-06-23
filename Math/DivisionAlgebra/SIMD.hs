@@ -67,7 +67,7 @@ instance Show (Complex Double) where
 
 
 infixl 6 +:
-class VectorSpace c => DivisionAlgebra c where
+class Num c => FieldAlgebra c where
   type RealPart c :: *
   type ImagPart c :: *
   (+:) :: RealPart c -> ImagPart c -> c
@@ -76,7 +76,7 @@ class VectorSpace c => DivisionAlgebra c where
   modulus :: c -> RealPart c
   modulusSq :: c -> RealPart c
 
-instance DivisionAlgebra Double where
+instance FieldAlgebra Double where
   type RealPart Double = Double
   type ImagPart Double = ()
   x+:() = x
@@ -84,7 +84,7 @@ instance DivisionAlgebra Double where
   imagPart = const ()
   modulus = abs
   modulusSq = (^2)
-instance DivisionAlgebra (Complex Double) where
+instance FieldAlgebra (Complex Double) where
   type RealPart (Complex Double) = Double
   type ImagPart (Complex Double) = Double
   x+:y = ComplexDouble $ SIMD.packVector (x,y)
