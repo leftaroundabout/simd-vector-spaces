@@ -25,13 +25,16 @@ module Data.VectorSpace.SIMD ( ℝ, pattern ℝ
                              , ℝ³, pattern ℝ³
                              , ℝ⁴, pattern ℝ⁴
                              , Complex
-                             , ℂ
-                             , ℂ² ) where
+                             , ℂ, pattern ℂ
+                             , ℂ², pattern ℂ²
+                             , ℂ³, pattern ℂ³
+                             , ℂ⁴, pattern ℂ⁴
+                             ) where
 
 import Math.DivisionAlgebra.SIMD
 
 import Data.AdditiveGroup
-import Data.VectorSpace
+import Data.VectorSpace hiding (magnitudeSq)
 
 import qualified Data.Primitive.SIMD as SIMD
 
@@ -44,8 +47,9 @@ newtype ℝ⁴ = R⁴ SIMD.DoubleX4
 
 type ℂ = Complex ℝ
 newtype ℂ² = C² SIMD.DoubleX4
-data ℂ³ = C³ SIMD.DoubleX4 SIMD.DoubleX4
-data ℂ⁴ = C⁴ SIMD.DoubleX4 SIMD.DoubleX4
+
+type ℂ³ = ComplexT ℝ³
+type ℂ⁴ = ComplexT ℝ⁴
 
 #define SIMDVSInstances(V,C,F)     \
 instance AdditiveGroup (V) where {  \
@@ -91,6 +95,10 @@ instance InnerSpace ℂ² where
 instance UnitarySpace ℂ² where
   magnitudeSq (C² a) = SIMD.sumVector $ a * a
 
+
+
+
+
 data DirectSum v w = DirectSum !v !w
 
 infixl 6 ⊕
@@ -102,6 +110,9 @@ type family (⊕) v w where
   ℝ³ ⊕ ℝ = ℝ⁴
   ℝ² ⊕ ℝ² = ℝ⁴
   ℂ ⊕ ℂ = ℂ²
+  ℂ² ⊕ ℂ = ℂ³
+  ℂ ⊕ ℂ² = ℂ³
+  ℂ² ⊕ ℂ² = ℂ⁴
   v ⊕ w = DirectSum v w
 
 
@@ -162,6 +173,30 @@ instance KnownDirectSum ℂ ℂ where
                  , ComplexDouble $ SIMD.packVector (ry,iy) )
    where (rx,ix,ry,iy) = SIMD.unpackVector a
 
+instance KnownDirectSum ℂ ℂ² where
+  {-# INLINE (⊕) #-}
+  (⊕) (ComplexDouble x) (C² yz)
+      = ComplexT (R³ $ SIMD.packVector (0,rx,ry,rz)) (R³ $ SIMD.packVector (0,ix,iy,iz))
+   where (rx,ix) = SIMD.unpackVector x
+         (ry,iy,rz,iz) = SIMD.unpackVector yz
+  {-# INLINE split #-}
+  split (ComplexT (R³ ra) (R³ ia)) = ( ComplexDouble $ SIMD.packVector (rx,ix)
+                                     , C² $ SIMD.packVector (ry,iy,rz,iz) )
+   where (_,rx,ry,rz) = SIMD.unpackVector ra
+         (_,ix,iy,iz) = SIMD.unpackVector ia
+
+instance KnownDirectSum ℂ² ℂ where
+  {-# INLINE (⊕) #-}
+  (⊕) (C² xy) (ComplexDouble z)
+      = ComplexT (R³ $ SIMD.packVector (0,rx,ry,rz)) (R³ $ SIMD.packVector (0,ix,iy,iz))
+   where (rx,ix,ry,iy) = SIMD.unpackVector xy
+         (rz,iz) = SIMD.unpackVector z
+  {-# INLINE split #-}
+  split (ComplexT (R³ ra) (R³ ia)) = ( C² $ SIMD.packVector (rx,ix,ry,iy)
+                                     , ComplexDouble $ SIMD.packVector (rz,iz) )
+   where (_,rx,ry,rz) = SIMD.unpackVector ra
+         (_,ix,iy,iz) = SIMD.unpackVector ia
+
 instance KnownDirectSum (DirectSum u v) w
 
 
@@ -197,6 +232,31 @@ pattern ℂ² x y <- (split -> (x,y))
         where (rx,ix) = SIMD.unpackVector x
               (ry,iy) = SIMD.unpackVector y
 
+splitℂ³ :: ℂ³ -> (ℂ,ℂ,ℂ)
+splitℂ³ (ComplexT (R³ ra) (R³ ia)) = ( ComplexDouble $ SIMD.packVector (rx,ix)
+                                     , ComplexDouble $ SIMD.packVector (ry,iy)
+                                     , ComplexDouble $ SIMD.packVector (rz,iz) )
+ where (_,rx,ry,rz) = SIMD.unpackVector ra
+       (_,ix,iy,iz) = SIMD.unpackVector ia
+
+pattern ℂ³ :: ℂ -> ℂ -> ℂ -> ℂ³
+pattern ℂ³ x y z <- (splitℂ³ -> (x,y,z))
+ where ℂ³ x y z = ComplexT (ℝ³ (realPart x) (realPart y) (realPart z))
+                           (ℝ³ (imagPart x) (imagPart y) (imagPart z))
+
+splitℂ⁴ :: ℂ⁴ -> (ℂ,ℂ,ℂ,ℂ)
+splitℂ⁴ (ComplexT (R⁴ ra) (R⁴ ia)) = ( ComplexDouble $ SIMD.packVector (rx,ix)
+                                     , ComplexDouble $ SIMD.packVector (ry,iy)
+                                     , ComplexDouble $ SIMD.packVector (rz,iz)
+                                     , ComplexDouble $ SIMD.packVector (rw,iw) )
+ where (rx,ry,rz,rw) = SIMD.unpackVector ra
+       (ix,iy,iz,iw) = SIMD.unpackVector ia
+
+pattern ℂ⁴ :: ℂ -> ℂ -> ℂ -> ℂ -> ℂ⁴
+pattern ℂ⁴ x y z w <- (splitℂ⁴ -> (x,y,z,w))
+ where ℂ⁴ x y z w = ComplexT (ℝ⁴ (realPart x) (realPart y) (realPart z) (realPart w))
+                             (ℝ⁴ (imagPart x) (imagPart y) (imagPart z) (imagPart w))
+
 
 instance Show ℝ² where
   showsPrec p (ℝ² x y) = showParen (p>9) $ ("ℝ² "++)
@@ -210,6 +270,12 @@ instance Show ℝ⁴ where
 instance Show ℂ² where
   showsPrec p (ℂ² x y) = showParen (p>9) $ ("ℂ² "++)
      . showsPrec 10 x.(' ':).showsPrec 10 y
+instance Show ℂ³ where
+  showsPrec p (ℂ³ x y z) = showParen (p>9) $ ("ℂ³ "++)
+     . showsPrec 10 x.(' ':).showsPrec 10 y.(' ':).showsPrec 10 z
+instance Show ℂ⁴ where
+  showsPrec p (ℂ⁴ x y z w) = showParen (p>9) $ ("ℂ⁴ "++)
+     . showsPrec 10 x.(' ':).showsPrec 10 y.(' ':).showsPrec 10 z.(' ':).showsPrec 10 w
 
 
 
@@ -217,3 +283,11 @@ instance Arbitrary ℝ² where arbitrary = fmap (R² . SIMD.packVector) arbitrar
 instance Arbitrary ℝ³ where arbitrary = fmap (R³ . SIMD.packVector) arbitrary
 instance Arbitrary ℝ⁴ where arbitrary = fmap (R⁴ . SIMD.packVector) arbitrary
 instance Arbitrary ℂ² where arbitrary = fmap (C² . SIMD.packVector) arbitrary
+
+instance (Arbitrary v, Arbitrary w) => Arbitrary (DirectSum v w) where
+  arbitrary = uncurry DirectSum <$> arbitrary
+  shrink (DirectSum v w) = DirectSum <$> shrink v <*> shrink w
+
+instance Arbitrary v => Arbitrary (ComplexT v) where
+  arbitrary = uncurry ComplexT <$> arbitrary
+  shrink (ComplexT r i) = ComplexT <$> shrink r <*> shrink i

@@ -53,6 +53,10 @@ tests = testGroup "Vector-space identities"
         (prop_distrib :: ℂ -> ℂ² -> ℂ² -> Similarity)
      , testSimilarity "sesquilin @ℂ²" 1e-14
         (prop_sesquilin :: ℂ -> ℂ² -> ℂ² -> Similarity)
+     , testSimilarity "distrib @ℂ³" 1e-14
+        (prop_distrib :: ℂ -> ℂ³ -> ℂ³ -> Similarity)
+     , testSimilarity "sesquilin @ℂ³" 1e-14
+        (prop_sesquilin :: ℂ -> ℂ³ -> ℂ³ -> Similarity)
      ]
   ]
 

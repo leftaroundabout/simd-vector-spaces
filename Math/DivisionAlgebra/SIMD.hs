@@ -179,3 +179,38 @@ instance ( FieldAlgebra (Complex s)
                    => UnitarySpace (Complex s) where
   magnitudeSq = modulusSq
   magnitude = modulus
+
+
+
+
+
+data ComplexT v = ComplexT !v !v
+
+instance (AdditiveGroup v) => AdditiveGroup (ComplexT v) where
+  ComplexT ra ia ^+^ ComplexT rb ib = ComplexT (ra^+^rb) (ia^+^ib)
+  zeroV = ComplexT zeroV zeroV
+  negateV (ComplexT ra ia) = ComplexT (negateV ra) (negateV ia)
+
+instance ( VectorSpace v
+         , FieldAlgebra (Complex (Scalar v))
+         , RealPart (Complex (Scalar v)) ~ Scalar v
+         , ImagPart (Complex (Scalar v)) ~ Scalar v ) => VectorSpace (ComplexT v) where
+  type Scalar (ComplexT v) = Complex (Scalar v)
+  μ *^ ComplexT ra ia = ComplexT (rμ*^ra ^-^ iμ*^ia)
+                                 (iμ*^ra ^+^ rμ*^ia)
+   where rμ = realPart μ
+         iμ = imagPart μ
+
+instance ( InnerSpace v, AdditiveGroup (Complex (Scalar v))
+         , FieldAlgebra (Complex (Scalar v))
+         , RealPart (Complex (Scalar v)) ~ Scalar v
+         , ImagPart (Complex (Scalar v)) ~ Scalar v ) => InnerSpace (ComplexT v) where
+  ComplexT ra ia <.> ComplexT rb ib = (ra<.>rb + ia<.>ib) +: (ra<.>ib - ia<.>rb)
+
+instance ( UnitarySpace v, AdditiveGroup (Complex (Scalar v))
+         , Floating (Scalar v), RealPart (Scalar v) ~ Scalar v
+         , FieldAlgebra (Complex (Scalar v))
+         , RealPart (Complex (Scalar v)) ~ Scalar v
+         , ImagPart (Complex (Scalar v)) ~ Scalar v )
+         => UnitarySpace (ComplexT v) where
+  magnitudeSq (ComplexT ra ia) = magnitudeSq ra + magnitudeSq ia
