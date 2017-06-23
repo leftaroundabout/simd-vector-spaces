@@ -77,15 +77,18 @@ instance InnerSpace (Complex Double) where
          (rb, ib) = SIMD.unpackVector b
   
 instance Show (Complex Double) where
-  showsPrec p (ComplexDouble a) = showParen (p>6) $ shows r . ("+:"++) . shows i
+  showsPrec p (ComplexDouble a) = showParen (p>6) $ shows r . showSign . shows (abs i)
    where (r,i) = SIMD.unpackVector a
+         showSign | i<0        = ("-:"++)
+                  | otherwise  = ("+:"++)
 
 
-infixl 6 +:
+infixl 6 +:, -:
 class (Num c, Num (RealPart c)) => FieldAlgebra c where
   type RealPart c :: *
   type ImagPart c :: *
   (+:) :: RealPart c -> ImagPart c -> c
+  (-:) :: RealPart c -> ImagPart c -> c
   realPart :: c -> RealPart c
   imagPart :: c -> ImagPart c
   modulus :: c -> RealPart c
@@ -96,6 +99,7 @@ instance FieldAlgebra Double where
   type RealPart Double = Double
   type ImagPart Double = ()
   x+:() = x
+  x-:() = x
   realPart = id
   imagPart = const ()
   modulus = abs
@@ -105,6 +109,7 @@ instance FieldAlgebra (Complex Double) where
   type RealPart (Complex Double) = Double
   type ImagPart (Complex Double) = Double
   x+:y = ComplexDouble $ SIMD.packVector (x,y)
+  x-:y = ComplexDouble $ SIMD.packVector (x,-y)
   realPart (ComplexDouble a) = r
    where (r, _) = SIMD.unpackVector a
   imagPart (ComplexDouble a) = i
@@ -118,6 +123,7 @@ instance FieldAlgebra Integer where
   type RealPart Integer = Integer
   type ImagPart Integer = ()
   x+:() = x
+  x-:() = x
   realPart = id
   imagPart = const ()
   modulus = abs
@@ -127,6 +133,7 @@ instance FieldAlgebra Int where
   type RealPart Int = Int
   type ImagPart Int = ()
   x+:() = x
+  x-:() = x
   realPart = id
   imagPart = const ()
   modulus = abs
