@@ -12,6 +12,7 @@
 {-# LANGUAGE FlexibleInstances       #-}
 {-# LANGUAGE FlexibleContexts        #-}
 {-# LANGUAGE MultiParamTypeClasses   #-}
+{-# LANGUAGE UndecidableInstances    #-}
 {-# LANGUAGE DefaultSignatures       #-}
 {-# LANGUAGE ScopedTypeVariables     #-}
 {-# LANGUAGE UnicodeSyntax           #-}

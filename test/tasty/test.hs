@@ -14,6 +14,8 @@
 
 module Main where
 
+import Prelude hiding ((^))
+
 import Math.DivisionAlgebra.SIMD
 import Data.VectorSpace.SIMD
 
@@ -31,6 +33,10 @@ main = defaultMain tests
 prop_distrib :: CheckableVect v => Scalar v -> v -> v -> Similarity
 prop_distrib μ v w = μ *^ v ^+^ μ *^ w ≈ μ *^ (v^+^w)
 
+prop_sesquilin :: CheckableVect v => Scalar v -> v -> v -> Similarity
+prop_sesquilin μ v w = v<.>(μ*^w) ≈ μ * (v<.>w)
+                    &≈ (μ*^v)<.>w ≈ conjugate μ * (v<.>w)
+
 
 tests :: TestTree
 tests = testGroup "Vector-space identities"
@@ -41,14 +47,20 @@ tests = testGroup "Vector-space identities"
         (prop_distrib :: ℝ -> ℝ³ -> ℝ³ -> Similarity)
      , testSimilarity "distrib @ℂ" 1e-14
         (prop_distrib :: ℂ -> ℂ -> ℂ -> Similarity)
+     , testSimilarity "sesquilin @ℂ" 1e-14
+        (prop_sesquilin :: ℂ -> ℂ -> ℂ -> Similarity)
      , testSimilarity "distrib @ℂ²" 1e-14
         (prop_distrib :: ℂ -> ℂ² -> ℂ² -> Similarity)
+     , testSimilarity "sesquilin @ℂ²" 1e-14
+        (prop_sesquilin :: ℂ -> ℂ² -> ℂ² -> Similarity)
      ]
   ]
 
 
 
-type CheckableVect v = (UnitarySpace v, Ord (RealPart (Scalar v)))
+type CheckableVect v = ( UnitarySpace v, UnitarySpace (Scalar v)
+                       , Ord (RealPart (Scalar v))
+                       , Scalar (Scalar v) ~ Scalar v )
 newtype Similarity = Similarity {evalSimilarity :: ℝ -> Bool}
 
 infix 4 ≈
@@ -56,6 +68,9 @@ infix 4 ≈
 v ≈ w = Similarity $ \ε -> magnitudeSq (v^-^w) * fromInteger (round $ recip ε^2)
                          <= (magnitudeSq v + magnitudeSq w)
 
+infixr 3 &≈
+(&≈) :: Similarity -> Similarity -> Similarity
+Similarity p &≈ Similarity q = Similarity $ \ε -> p ε && q ε
 
 class (QC.Testable (AfterEpsilon t)) => SimTestable t where
   type AfterEpsilon t :: *
@@ -85,3 +100,6 @@ showOOM n = case m₁₀ of
         {'0'->'⁰';'1'->'¹';'2'->'²';'3'->'³';'4'->'⁴';'5'->'⁵';'6'->'⁶'
         ;'7'->'⁷';'8'->'⁸';'9'->'⁹';'-'->'⁻';c->c})
         . show
+
+(^) :: Num n => n -> Int -> n
+x^2 = x*x

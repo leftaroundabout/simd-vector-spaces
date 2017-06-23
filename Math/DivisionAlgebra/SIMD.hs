@@ -90,6 +90,7 @@ class (Num c, Num (RealPart c)) => FieldAlgebra c where
   imagPart :: c -> ImagPart c
   modulus :: c -> RealPart c
   modulusSq :: c -> RealPart c
+  conjugate :: c -> c
 
 instance FieldAlgebra Double where
   type RealPart Double = Double
@@ -99,6 +100,7 @@ instance FieldAlgebra Double where
   imagPart = const ()
   modulus = abs
   modulusSq = (^2)
+  conjugate = id
 instance FieldAlgebra (Complex Double) where
   type RealPart (Complex Double) = Double
   type ImagPart (Complex Double) = Double
@@ -109,6 +111,8 @@ instance FieldAlgebra (Complex Double) where
    where (_, i) = SIMD.unpackVector a
   modulus = sqrt . modulusSq
   modulusSq (ComplexDouble a) = SIMD.sumVector $ a*a
+  conjugate = \(ComplexDouble a) -> ComplexDouble $ a * cf
+   where cf = SIMD.packVector (1,-1)
 
 instance FieldAlgebra Integer where
   type RealPart Integer = Integer
@@ -118,6 +122,7 @@ instance FieldAlgebra Integer where
   imagPart = const ()
   modulus = abs
   modulusSq = (^2)
+  conjugate = id
 instance FieldAlgebra Int where
   type RealPart Int = Int
   type ImagPart Int = ()
@@ -126,6 +131,7 @@ instance FieldAlgebra Int where
   imagPart = const ()
   modulus = abs
   modulusSq = (^2)
+  conjugate = id
 
 fromStdComplex :: (FieldAlgebra c, RealPart c ~ s, ImagPart c ~ s)
                     => Prelude.Complex s -> c
